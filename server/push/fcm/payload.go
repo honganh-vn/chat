@@ -37,6 +37,16 @@ func payloadToData(pl *push.Payload) (map[string]string, error) {
 	data["ts"] = pl.Timestamp.Format(time.RFC3339Nano)
 	// Must use "xfrom" because "from" is a reserved word. Google did not bother to document it anywhere.
 	data["xfrom"] = pl.From
+	uid := t.ParseUid(pl.From)
+
+	sender, err := store.Users.Get(uid)
+	if err != nil {
+		logs.Warn.Printf("fcm push: could not get uid: %s", uid, err)
+		return nil, err
+	}
+	if pubmap, ok := sender.Public.(map[string]any); ok {
+		data["sender"] = pubmap["fn"].(string)
+	}
 	if pl.What == push.ActMsg {
 		data["seq"] = strconv.Itoa(pl.SeqId)
 		if pl.ContentType != "" {
@@ -277,6 +287,11 @@ func androidNotificationConfig(what, topic string, data map[string]string, confi
 		body = data["content"]
 	}
 
+	title := config.Android.GetStringField(what, "Title")
+	if title == "$sender" {
+		body = data["sender"]
+	}
+
 	// Client-side display priority.
 	priority = string(common.AndroidNotificationPriorityHigh)
 	if videoCall {
@@ -290,7 +305,7 @@ func androidNotificationConfig(what, topic string, data map[string]string, confi
 		NotificationPriority: priority,
 		Visibility:           string(common.AndroidVisibilityPrivate),
 		TitleLocKey:          config.Android.GetStringField(what, "TitleLocKey"),
-		Title:                config.Android.GetStringField(what, "Title"),
+		Title:                title,
 		BodyLocKey:           config.Android.GetStringField(what, "BodyLocKey"),
 		Body:                 body,
 		Icon:                 config.Android.GetStringField(what, "Icon"),
