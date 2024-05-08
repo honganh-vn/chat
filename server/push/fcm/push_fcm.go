@@ -130,6 +130,10 @@ func (Handler) Init(jsonconf json.RawMessage) (bool, error) {
 }
 
 func sendFcmV1(rcpt *push.Receipt, config *configType) {
+	rcptJson, _ := json.Marshal(*rcpt)
+	configJson, _ := json.Marshal(*config)
+	logs.Info.Println("fcm: ", string(rcptJson), string(configJson))
+
 	messages, uids := PrepareV1Notifications(rcpt, config)
 	for i := range messages {
 		req := &fcmv1.SendMessageRequest{
