@@ -28,7 +28,7 @@ func payloadToData(pl *push.Payload) (map[string]string, error) {
 		return nil, errors.New("empty push payload")
 	}
 	plLog, _ := json.Marshal(pl)
-	logs.Info.Println("fcm: payloadToData", plLog)
+	logs.Info.Println("fcm: payloadToData", string(plLog))
 
 	data := make(map[string]string)
 	var err error
