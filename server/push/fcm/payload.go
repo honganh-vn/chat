@@ -45,7 +45,6 @@ func payloadToData(pl *push.Payload) (map[string]string, error) {
 	sender, err := store.Users.Get(uid)
 	if err != nil {
 		logs.Warn.Printf("fcm push: could not get uid: %s", uid, err)
-		return nil, err
 	} else {
 		logs.Warn.Printf("fcm push: get sender name")
 		if pubmap, ok := sender.Public.(map[string]any); ok {
