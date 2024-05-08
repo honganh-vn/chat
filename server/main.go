@@ -733,6 +733,21 @@ func main() {
 		// Serve json-formatted 404 for all other URLs
 		mux.HandleFunc("/", serve404)
 	}
+	//fcm.PayloadToData(&push.Payload{
+	//	What:        "msg",
+	//	Silent:      false,
+	//	Topic:       "grpdoHXNW9RdZk",
+	//	Timestamp:   time.Time{},
+	//	From:        "usrtZAnxQaWn4A",
+	//	SeqId:       28,
+	//	ContentType: "",
+	//	Content:     "hello",
+	//	Webrtc:      "",
+	//	AudioOnly:   false,
+	//	Replace:     "",
+	//	ModeWant:    0,
+	//	ModeGiven:   0,
+	//})
 
 	if err = listenAndServe(config.Listen, mux, tlsConfig, signalHandler()); err != nil {
 		logs.Err.Fatal(err)
