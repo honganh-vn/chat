@@ -24,11 +24,12 @@ const (
 )
 
 func payloadToData(pl *push.Payload) (map[string]string, error) {
-	plLog, _ := json.Marshal(pl)
-	logs.Warn.Printf("fcm push: pl: %s", plLog)
 	if pl == nil {
 		return nil, errors.New("empty push payload")
 	}
+	plLog, _ := json.Marshal(pl)
+	logs.Info.Println("fcm: payloadToData", plLog)
+
 	data := make(map[string]string)
 	var err error
 	data["what"] = pl.What
@@ -41,16 +42,16 @@ func payloadToData(pl *push.Payload) (map[string]string, error) {
 	data["xfrom"] = pl.From
 	uid := t.ParseUid(pl.From)
 
-	logs.Warn.Printf("fcm push: get sender id")
+	logs.Info.Println("fcm: get user", uid)
 	sender, err := store.Users.Get(uid)
 	if err != nil {
-		logs.Warn.Printf("fcm push: could not get uid: %s", uid, err)
+		logs.Info.Println("fcm: could not get user by id", uid)
 	} else {
-		logs.Warn.Printf("fcm push: get sender name")
+		logs.Info.Println("fcm: sender public", sender.Public)
 		if pubmap, ok := sender.Public.(map[string]any); ok {
 			data["sender"] = pubmap["fn"].(string)
 		}
-		logs.Warn.Printf("fcm push: get sender name done")
+		logs.Info.Println("fcm: sender public done", data["sender"])
 	}
 
 	if pl.What == push.ActMsg {
