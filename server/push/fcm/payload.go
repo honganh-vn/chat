@@ -24,6 +24,10 @@ const (
 	// TTL of a regular push notification in seconds.
 	defaultTimeToLive = 3600
 )
+const (
+	DefaultImageMsg = "Đã gửi 1 ảnh"
+	DefaultFileMsg  = "Đã gửi 1 tệp đính kèm"
+)
 
 func PayloadToData(pl *push.Payload) (map[string]string, error) {
 	if pl == nil {
@@ -142,6 +146,7 @@ func PrepareV1Notifications(rcpt *push.Receipt, config *configType) ([]*fcmv1.Me
 	var count int
 	// Devices which were online in the topic when the message was sent.
 	skipDevices := make(map[string]struct{})
+	senderID := t.ParseUserId(rcpt.Payload.From)
 	if len(rcpt.To) > 0 {
 		// List of UIDs for querying the database
 
@@ -173,6 +178,10 @@ func PrepareV1Notifications(rcpt *push.Receipt, config *configType) ([]*fcmv1.Me
 	var messages []*fcmv1.Message
 	var uids []t.Uid
 	for uid, devList := range devices {
+		// ignore owner
+		if uid == senderID {
+			continue
+		}
 		topic := rcpt.Payload.Topic
 		userData := data
 		tcat := t.GetTopicCat(topic)
@@ -201,7 +210,7 @@ func PrepareV1Notifications(rcpt *push.Receipt, config *configType) ([]*fcmv1.Me
 				case "android":
 					msg.Android = androidNotificationConfig(rcpt.Payload.What, topic, userData, config, tcat)
 				case "ios":
-					msg.Apns = apnsNotificationConfig(rcpt.Payload.What, topic, userData, rcpt.To[uid].Unread, config)
+					msg.Apns = apnsNotificationConfig(rcpt.Payload.What, topic, userData, rcpt.To[uid].Unread, config, tcat)
 				case "web":
 					if config != nil && config.Webpush != nil && config.Webpush.Enabled {
 						msg.Webpush = &fcmv1.WebpushConfig{}
@@ -228,10 +237,11 @@ func PrepareV1Notifications(rcpt *push.Receipt, config *configType) ([]*fcmv1.Me
 			Topic: topic,
 			Data:  userData,
 		}
+		tcat := t.GetTopicCat(topic)
 
 		// We don't know the platform of the receiver, must provide payload for all platforms.
-		msg.Android = androidNotificationConfig(rcpt.Payload.What, topic, userData, config, 0)
-		msg.Apns = apnsNotificationConfig(rcpt.Payload.What, topic, userData, 0, config)
+		msg.Android = androidNotificationConfig(rcpt.Payload.What, topic, userData, config, tcat)
+		msg.Apns = apnsNotificationConfig(rcpt.Payload.What, topic, userData, 0, config, tcat)
 		// TODO: add webpush payload.
 		messages = append(messages, &msg)
 		// UID is not used in handling Topic pushes, but should keep the same count as messages.
@@ -304,12 +314,11 @@ func androidNotificationConfig(what, topic string, data map[string]string, confi
 	}
 	title := ""
 	body := ""
-	logs.Info.Println("fcm: rc", data["rc"])
 	originalContent := data["content"]
 	if strings.Contains(data["rc"], "\"IM\"") {
-		originalContent = "Đã gửi 1 ảnh"
+		originalContent = DefaultImageMsg
 	} else if strings.Contains(data["rc"], "\"EX\"") {
-		originalContent = "Đã gửi 1 tệp đính kèm"
+		originalContent = DefaultFileMsg
 	}
 
 	if tcat == t.TopicCatP2P {
@@ -349,7 +358,7 @@ func apnsShouldPresentAlert(what, callStatus, isSilent string, config *configTyp
 	return config.Apns != nil && config.Apns.Enabled && what != push.ActRead && callStatus == "" && isSilent == ""
 }
 
-func apnsNotificationConfig(what, topic string, data map[string]string, unread int, config *configType) *fcmv1.ApnsConfig {
+func apnsNotificationConfig(what, topic string, data map[string]string, unread int, config *configType, tcat t.TopicCat) *fcmv1.ApnsConfig {
 	callStatus := data["webrtc"]
 	expires := time.Now().UTC().Add(time.Duration(defaultTimeToLive) * time.Second)
 	if config.TimeToLive > 0 {
@@ -386,13 +395,22 @@ func apnsNotificationConfig(what, topic string, data map[string]string, unread i
 
 	// Do not present alert for read notifications and video calls.
 	if apnsShouldPresentAlert(what, callStatus, data["silent"], config) {
-		body := config.Apns.GetStringField(what, "Body")
-		if body == "$content" {
-			body = data["content"]
+		title := ""
+		body := ""
+		originalContent := data["content"]
+		if strings.Contains(data["rc"], "\"IM\"") {
+			originalContent = DefaultImageMsg
+		} else if strings.Contains(data["rc"], "\"EX\"") {
+			originalContent = DefaultFileMsg
 		}
-		title := config.Android.GetStringField(what, "Title")
-		if title == "$sender" {
+
+		if tcat == t.TopicCatP2P {
+			body = originalContent
 			title = data["sender"]
+		}
+		if tcat == t.TopicCatGrp {
+			title = data["topicName"]
+			body = fmt.Sprintf("%s: %s", data["sender"], originalContent)
 		}
 
 		apsPayload.Alert = &common.ApsAlert{
