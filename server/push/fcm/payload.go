@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	fcmv1 "google.golang.org/api/fcm/v1"
@@ -46,7 +47,6 @@ func PayloadToData(pl *push.Payload) (map[string]string, error) {
 		if pubmap, ok := topicData.Public.(map[string]any); ok {
 			data["topicName"] = pubmap["fn"].(string)
 		}
-		logs.Info.Println("fcm: sender public done", data["sender"])
 	}
 	data["ts"] = pl.Timestamp.Format(time.RFC3339Nano)
 	// Must use "xfrom" because "from" is a reserved word. Google did not bother to document it anywhere.
@@ -304,14 +304,21 @@ func androidNotificationConfig(what, topic string, data map[string]string, confi
 	}
 	title := ""
 	body := ""
+	logs.Info.Println("fcm: rc", data["rc"])
+	originalContent := data["content"]
+	if strings.Contains(data["rc"], "\"IM\"") {
+		originalContent = "Đã gửi 1 ảnh"
+	} else if strings.Contains(data["rc"], "\"EX\"") {
+		originalContent = "Đã gửi 1 tệp đính kèm"
+	}
 
 	if tcat == t.TopicCatP2P {
-		body = data["content"]
+		body = originalContent
 		title = data["sender"]
 	}
 	if tcat == t.TopicCatGrp {
 		title = data["topicName"]
-		body = fmt.Sprintf("%s: %s", data["sender"], data["content"])
+		body = fmt.Sprintf("%s: %s", data["sender"], originalContent)
 	}
 
 	// Client-side display priority.
