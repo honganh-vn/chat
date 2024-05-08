@@ -40,19 +40,19 @@ func payloadToData(pl *push.Payload) (map[string]string, error) {
 	data["ts"] = pl.Timestamp.Format(time.RFC3339Nano)
 	// Must use "xfrom" because "from" is a reserved word. Google did not bother to document it anywhere.
 	data["xfrom"] = pl.From
-	uid := t.ParseUid(pl.From)
+	//uid := t.ParseUid(pl.From)
 
-	logs.Info.Println("fcm: get user", uid)
-	sender, err := store.Users.Get(uid)
-	if err != nil {
-		logs.Info.Println("fcm: could not get user by id", uid)
-	} else {
-		logs.Info.Println("fcm: sender public", sender.Public)
-		if pubmap, ok := sender.Public.(map[string]any); ok {
-			data["sender"] = pubmap["fn"].(string)
-		}
-		logs.Info.Println("fcm: sender public done", data["sender"])
-	}
+	//logs.Info.Println("fcm: get user", uid)
+	//sender, err := store.Users.Get(uid)
+	//if err != nil {
+	//	logs.Info.Println("fcm: could not get user by id", uid)
+	//} else {
+	//	logs.Info.Println("fcm: sender public", sender.Public)
+	//	if pubmap, ok := sender.Public.(map[string]any); ok {
+	//		data["sender"] = pubmap["fn"].(string)
+	//	}
+	//	logs.Info.Println("fcm: sender public done", data["sender"])
+	//}
 
 	if pl.What == push.ActMsg {
 		data["seq"] = strconv.Itoa(pl.SeqId)
@@ -295,9 +295,9 @@ func androidNotificationConfig(what, topic string, data map[string]string, confi
 	}
 
 	title := config.Android.GetStringField(what, "Title")
-	if title == "$sender" {
-		title = data["sender"]
-	}
+	//if title == "$sender" {
+	//	title = data["sender"]
+	//}
 
 	// Client-side display priority.
 	priority = string(common.AndroidNotificationPriorityHigh)
