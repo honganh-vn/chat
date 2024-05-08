@@ -38,6 +38,16 @@ func PayloadToData(pl *push.Payload) (map[string]string, error) {
 		data["silent"] = "true"
 	}
 	data["topic"] = pl.Topic
+
+	topicData, err := store.Topics.Get(pl.Topic)
+	if err != nil {
+		logs.Info.Println("fcm: could not get topic info", pl.Topic)
+	} else {
+		if pubmap, ok := topicData.Public.(map[string]any); ok {
+			data["topicName"] = pubmap["fn"].(string)
+		}
+		logs.Info.Println("fcm: sender public done", data["sender"])
+	}
 	data["ts"] = pl.Timestamp.Format(time.RFC3339Nano)
 	// Must use "xfrom" because "from" is a reserved word. Google did not bother to document it anywhere.
 	data["xfrom"] = pl.From
@@ -189,7 +199,7 @@ func PrepareV1Notifications(rcpt *push.Receipt, config *configType) ([]*fcmv1.Me
 				msg.Data = userData
 				switch d.Platform {
 				case "android":
-					msg.Android = androidNotificationConfig(rcpt.Payload.What, topic, userData, config)
+					msg.Android = androidNotificationConfig(rcpt.Payload.What, topic, userData, config, tcat)
 				case "ios":
 					msg.Apns = apnsNotificationConfig(rcpt.Payload.What, topic, userData, rcpt.To[uid].Unread, config)
 				case "web":
@@ -220,7 +230,7 @@ func PrepareV1Notifications(rcpt *push.Receipt, config *configType) ([]*fcmv1.Me
 		}
 
 		// We don't know the platform of the receiver, must provide payload for all platforms.
-		msg.Android = androidNotificationConfig(rcpt.Payload.What, topic, userData, config)
+		msg.Android = androidNotificationConfig(rcpt.Payload.What, topic, userData, config, 0)
 		msg.Apns = apnsNotificationConfig(rcpt.Payload.What, topic, userData, 0, config)
 		// TODO: add webpush payload.
 		messages = append(messages, &msg)
@@ -260,7 +270,7 @@ func ChannelsForUser(uid t.Uid) []string {
 	return channels
 }
 
-func androidNotificationConfig(what, topic string, data map[string]string, config *configType) *fcmv1.AndroidConfig {
+func androidNotificationConfig(what, topic string, data map[string]string, config *configType, tcat t.TopicCat) *fcmv1.AndroidConfig {
 	timeToLive := strconv.Itoa(defaultTimeToLive) + "s"
 	if config != nil && config.TimeToLive > 0 {
 		timeToLive = strconv.Itoa(config.TimeToLive) + "s"
@@ -292,15 +302,16 @@ func androidNotificationConfig(what, topic string, data map[string]string, confi
 	if config.Android == nil || !config.Android.Enabled {
 		return ac
 	}
+	title := ""
+	body := ""
 
-	body := config.Android.GetStringField(what, "Body")
-	if body == "$content" {
+	if tcat == t.TopicCatP2P {
 		body = data["content"]
-	}
-
-	title := config.Android.GetStringField(what, "Title")
-	if title == "$sender" {
 		title = data["sender"]
+	}
+	if tcat == t.TopicCatGrp {
+		title = data["topicName"]
+		body = fmt.Sprintf("%s: %s", data["sender"], data["content"])
 	}
 
 	// Client-side display priority.
