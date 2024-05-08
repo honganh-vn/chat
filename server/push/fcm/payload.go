@@ -3,6 +3,7 @@ package fcm
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -122,6 +123,9 @@ func PrepareV1Notifications(rcpt *push.Receipt, config *configType) ([]*fcmv1.Me
 		return nil, nil
 	}
 
+	// todo change to env
+	data["redirectURL"] = fmt.Sprintf("cplatform://chat?topic=%s", data["topic"])
+
 	// Device IDs to send pushes to.
 	var devices map[t.Uid][]t.DeviceDef
 	// Count of device IDs to push to.
@@ -182,7 +186,7 @@ func PrepareV1Notifications(rcpt *push.Receipt, config *configType) ([]*fcmv1.Me
 					Token: d.DeviceId,
 					Data:  userData,
 				}
-
+				msg.Data = userData
 				switch d.Platform {
 				case "android":
 					msg.Android = androidNotificationConfig(rcpt.Payload.What, topic, userData, config)
@@ -368,6 +372,10 @@ func apnsNotificationConfig(what, topic string, data map[string]string, unread i
 		if body == "$content" {
 			body = data["content"]
 		}
+		title := config.Android.GetStringField(what, "Title")
+		if title == "$sender" {
+			title = data["sender"]
+		}
 
 		apsPayload.Alert = &common.ApsAlert{
 			Action:          config.Apns.GetStringField(what, "Action"),
@@ -375,7 +383,7 @@ func apnsNotificationConfig(what, topic string, data map[string]string, unread i
 			Body:            body,
 			LaunchImage:     config.Apns.GetStringField(what, "LaunchImage"),
 			LocKey:          config.Apns.GetStringField(what, "LocKey"),
-			Title:           config.Apns.GetStringField(what, "Title"),
+			Title:           title,
 			Subtitle:        config.Apns.GetStringField(what, "Subtitle"),
 			TitleLocKey:     config.Apns.GetStringField(what, "TitleLocKey"),
 			SummaryArg:      config.Apns.GetStringField(what, "SummaryArg"),
