@@ -24,6 +24,8 @@ const (
 )
 
 func payloadToData(pl *push.Payload) (map[string]string, error) {
+	plLog, _ := json.Marshal(pl)
+	logs.Warn.Printf("fcm push: pl: %s", plLog)
 	if pl == nil {
 		return nil, errors.New("empty push payload")
 	}
@@ -37,6 +39,21 @@ func payloadToData(pl *push.Payload) (map[string]string, error) {
 	data["ts"] = pl.Timestamp.Format(time.RFC3339Nano)
 	// Must use "xfrom" because "from" is a reserved word. Google did not bother to document it anywhere.
 	data["xfrom"] = pl.From
+	uid := t.ParseUid(pl.From)
+
+	logs.Warn.Printf("fcm push: get sender id")
+	sender, err := store.Users.Get(uid)
+	if err != nil {
+		logs.Warn.Printf("fcm push: could not get uid: %s", uid, err)
+		return nil, err
+	} else {
+		logs.Warn.Printf("fcm push: get sender name")
+		if pubmap, ok := sender.Public.(map[string]any); ok {
+			data["sender"] = pubmap["fn"].(string)
+		}
+		logs.Warn.Printf("fcm push: get sender name done")
+	}
+
 	if pl.What == push.ActMsg {
 		data["seq"] = strconv.Itoa(pl.SeqId)
 		if pl.ContentType != "" {
@@ -277,6 +294,11 @@ func androidNotificationConfig(what, topic string, data map[string]string, confi
 		body = data["content"]
 	}
 
+	title := config.Android.GetStringField(what, "Title")
+	if title == "$sender" {
+		title = data["sender"]
+	}
+
 	// Client-side display priority.
 	priority = string(common.AndroidNotificationPriorityHigh)
 	if videoCall {
@@ -290,7 +312,7 @@ func androidNotificationConfig(what, topic string, data map[string]string, confi
 		NotificationPriority: priority,
 		Visibility:           string(common.AndroidVisibilityPrivate),
 		TitleLocKey:          config.Android.GetStringField(what, "TitleLocKey"),
-		Title:                config.Android.GetStringField(what, "Title"),
+		Title:                title,
 		BodyLocKey:           config.Android.GetStringField(what, "BodyLocKey"),
 		Body:                 body,
 		Icon:                 config.Android.GetStringField(what, "Icon"),
