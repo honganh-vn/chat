@@ -138,7 +138,7 @@ func PrepareV1Notifications(rcpt *push.Receipt, config *configType) ([]*fcmv1.Me
 	}
 
 	// todo change to env
-	data["redirectURL"] = fmt.Sprintf("cplatform://chat?topic=%s", data["topic"])
+	data["redirectURL"] = fmt.Sprintf("cplatform://chat_detail??topic=%s", data["topic"])
 
 	// Device IDs to send pushes to.
 	var devices map[t.Uid][]t.DeviceDef
@@ -346,9 +346,9 @@ func androidNotificationConfig(what, topic string, data map[string]string, confi
 		Title:                title,
 		BodyLocKey:           config.Android.GetStringField(what, "BodyLocKey"),
 		Body:                 body,
-		Icon:                 config.Android.GetStringField(what, "Icon"),
-		Color:                config.Android.GetStringField(what, "Color"),
-		ClickAction:          config.Android.GetStringField(what, "ClickAction"),
+		//Icon:        config.Android.GetStringField(what, "Icon"),
+		//Color:       config.Android.GetStringField(what, "Color"),
+		ClickAction: config.Android.GetStringField(what, "ClickAction"),
 	}
 
 	return ac
@@ -414,10 +414,10 @@ func apnsNotificationConfig(what, topic string, data map[string]string, unread i
 		}
 
 		apsPayload.Alert = &common.ApsAlert{
-			Action:          config.Apns.GetStringField(what, "Action"),
-			ActionLocKey:    config.Apns.GetStringField(what, "ActionLocKey"),
-			Body:            body,
-			LaunchImage:     config.Apns.GetStringField(what, "LaunchImage"),
+			Action:       config.Apns.GetStringField(what, "Action"),
+			ActionLocKey: config.Apns.GetStringField(what, "ActionLocKey"),
+			Body:         body,
+			//LaunchImage:     config.Apns.GetStringField(what, "LaunchImage"),
 			LocKey:          config.Apns.GetStringField(what, "LocKey"),
 			Title:           title,
 			Subtitle:        config.Apns.GetStringField(what, "Subtitle"),
