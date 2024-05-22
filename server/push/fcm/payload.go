@@ -138,7 +138,7 @@ func PrepareV1Notifications(rcpt *push.Receipt, config *configType) ([]*fcmv1.Me
 	}
 
 	// todo change to env
-	data["redirectURL"] = fmt.Sprintf("cplatform://chat_detail??topic=%s&total=%d", data["topic"], rcpt.Payload.SeqId)
+	data["redirectURL"] = fmt.Sprintf("cplatform://chat_detail?topic=%s&total=%d", data["topic"], rcpt.Payload.SeqId)
 
 	// Device IDs to send pushes to.
 	var devices map[t.Uid][]t.DeviceDef

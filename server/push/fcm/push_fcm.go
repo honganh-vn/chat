@@ -15,11 +15,10 @@ import (
 	"github.com/tinode/chat/server/push/common"
 	"github.com/tinode/chat/server/store"
 	"github.com/tinode/chat/server/store/types"
-	fcmv1 "google.golang.org/api/fcm/v1"
-	"os"
-
 	"golang.org/x/oauth2/google"
+	fcmv1 "google.golang.org/api/fcm/v1"
 	"google.golang.org/api/option"
+	"os"
 )
 
 var handler Handler
@@ -110,6 +109,37 @@ func (Handler) Init(jsonconf json.RawMessage) (bool, error) {
 	handler.channel = make(chan *push.ChannelReq, bufferSize)
 	handler.stop = make(chan bool, 1)
 	handler.projectID = credentials.ProjectID
+
+	//payload := push.Payload{
+	//	What:        "msg",
+	//	Silent:      false,
+	//	Topic:       "grpdoHXNW9RdZk",
+	//	Timestamp:   time.Time{},
+	//	From:        "usrtZAnxQaWn4A",
+	//	SeqId:       28,
+	//	ContentType: "",
+	//	Content:     "hello",
+	//	Webrtc:      "",
+	//	AudioOnly:   false,
+	//	Replace:     "",
+	//	ModeWant:    0,
+	//	ModeGiven:   0,
+	//}
+	////  {"to":{"3707684401509475641":{"delivered":0,"unread":1},"9268291513973444789":{"delivered":1,"unread":0}}
+	//sendFcmV1(&push.Receipt{
+	//	To: map[types.Uid]push.Recipient{
+	//		3707684401509475641: push.Recipient{
+	//			Delivered: 0,
+	//			Unread:    1,
+	//		},
+	//		9268291513973444789: push.Recipient{
+	//			Delivered: 1,
+	//			Unread:    0,
+	//		},
+	//	},
+	//	Channel: "",
+	//	Payload: payload,
+	//}, &config)
 
 	go func() {
 		for {
