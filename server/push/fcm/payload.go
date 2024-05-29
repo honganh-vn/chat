@@ -149,10 +149,29 @@ func PrepareV1Notifications(rcpt *push.Receipt, config *configType) ([]*fcmv1.Me
 	senderID := t.ParseUserId(rcpt.Payload.From)
 	if len(rcpt.To) > 0 {
 		// List of UIDs for querying the database
-
 		uids := make([]t.Uid, len(rcpt.To))
 		i := 0
+		// Get users from db then create map
+		var userIDs []t.Uid
+		for uid, _ := range rcpt.To {
+			userIDs = append(userIDs, uid)
+		}
+		users, err := store.Users.GetAll(userIDs...)
+		idToUser := map[t.Uid]t.User{}
+		for _, user := range users {
+			idToUser[user.Uid()] = user
+		}
+
 		for uid, to := range rcpt.To {
+			if err != nil {
+				return nil, nil
+			}
+			sentUser := idToUser[uid]
+			// Skip sent notification if user has been deleted or suspended.
+			if sentUser.State != t.StateOK {
+				continue
+			}
+
 			uids[i] = uid
 			i++
 			// Some devices were online and received the message. Skip them.
