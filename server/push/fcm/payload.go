@@ -47,7 +47,7 @@ func PayloadToData(pl *push.Payload) (map[string]string, error) {
 	topicData, err := store.Topics.Get(pl.Topic)
 	if err != nil {
 		logs.Info.Println("fcm: could not get topic info", pl.Topic)
-	} else {
+	} else if topicData.Public != nil {
 		if pubmap, ok := topicData.Public.(map[string]any); ok {
 			data["topicName"] = pubmap["fn"].(string)
 		}
